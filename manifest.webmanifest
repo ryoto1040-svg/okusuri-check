@@ -1,0 +1,1 @@
+{"id":"/","name":"お薬チェック","short_name":"お薬チェック","description":"この端末に保存する、朝と夕のお薬の記録","lang":"ja","start_url":"/","scope":"/","display":"standalone","background_color":"#f6f8f7","theme_color":"#19776d","icons":[{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}

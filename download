@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.production
+*-debug.log
+test-results/
+playwright-report/
+.tools/
+*.tsbuildinfo
+okusuri-check-public.zip
+okusuri-check-github-source.zip
