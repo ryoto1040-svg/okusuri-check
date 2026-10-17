@@ -1,0 +1,77 @@
+name: Publish to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '22'
+      - name: Install pnpm
+        run: npm install --global pnpm@11.25.0
+      - name: Restore folders if a browser upload flattened them
+        run: |
+          node --input-type=module <<'NODE'
+          import { existsSync, mkdirSync, copyFileSync } from 'node:fs';
+          import { basename, dirname } from 'node:path';
+          const groups = {
+            src: ['App.tsx', 'format.ts', 'localStore.ts', 'main.tsx', 'styles.css', 'sw.ts', 'usePwa.ts', 'useToday.ts'],
+            'src/components': ['BackupPanel.tsx', 'ConfirmDialog.tsx', 'HistoryView.tsx', 'Medicines.tsx', 'SettingsView.tsx'],
+            shared: ['basePath.ts', 'domain.ts'],
+            scripts: ['build-sw.mjs', 'check-build.mjs', 'check-file-ui.mjs', 'create-icons.mjs'],
+            public: ['_headers', 'icon-192.png', 'icon-512.png', 'icon.svg', 'manifest.webmanifest'],
+            tests: ['basePath.test.ts', 'domain.test.ts', 'storage.test.ts', 'sw.test.ts'],
+            'tests/browser': ['app.spec.ts'],
+            docs: ['ACCEPTANCE.md', 'DESIGN.md', 'GITHUB_PAGES.md', 'VALIDATION.md'],
+          };
+          for (const [folder, names] of Object.entries(groups)) {
+            for (const name of names) {
+              const target = `${folder}/${name}`;
+              if (existsSync(target)) continue;
+              if (!existsSync(basename(target))) throw new Error(`Missing source file: ${target}`);
+              mkdirSync(dirname(target), { recursive: true });
+              copyFileSync(basename(target), target);
+            }
+          }
+          NODE
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Test recording and offline logic
+        run: pnpm test
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+      - name: Build for the actual Pages URL
+        run: pnpm build
+        env:
+          VITE_BASE_PATH: ${{ steps.pages.outputs.base_path }}/
+      - name: Check generated paths
+        run: pnpm check:build
+      - name: Upload the static site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346
